@@ -1,7 +1,7 @@
 import {
-    QueryDocumentSnapshot,
-    Timestamp
-} from 'firebase/firestore';
+  FirebaseFirestoreTypes
+} from '@react-native-firebase/firestore';
+
 import type {
     WithDeleted
 } from '../../types/index.d.ts';
@@ -30,15 +30,15 @@ export function serverTimestampToIsoString(serverTimestampField: string, docData
     return date.toISOString();
 }
 
-export function isoStringToServerTimestamp(isoString: string): Timestamp {
+export function isoStringToServerTimestamp(isoString: string): FirebaseFirestoreTypes.Timestamp {
     const date = new Date(isoString);
-    return Timestamp.fromDate(date);
+    return FirebaseFirestoreTypes.Timestamp.fromDate(date);
 }
 
-export function firestoreRowToDocData<RxDocType>(
+export function firestoreRowToDocData<RxDocType extends FirebaseFirestoreTypes.DocumentData>(
     serverTimestampField: string,
     primaryPath: string,
-    row: QueryDocumentSnapshot<RxDocType>
+    row: FirebaseFirestoreTypes.QueryDocumentSnapshot<RxDocType>
 ): WithDeleted<RxDocType> {
     const docData = stripServerTimestampField(
         serverTimestampField,
@@ -63,7 +63,7 @@ export function stripPrimaryKey(
 }
 
 // https://stackoverflow.com/questions/61354866/is-there-a-workaround-for-the-firebase-query-in-limit-to-10
-export function getContentByIds<RxDocType>(ids: string[], getQuery: GetQuery<RxDocType>): Promise<QueryDocumentSnapshot<RxDocType>[]> {
+export function getContentByIds<RxDocType extends FirebaseFirestoreTypes.DocumentData>(ids: string[], getQuery: GetQuery<RxDocType>): Promise<FirebaseFirestoreTypes.QueryDocumentSnapshot<RxDocType>[]> {
     const batches = [];
 
     while (ids.length) {

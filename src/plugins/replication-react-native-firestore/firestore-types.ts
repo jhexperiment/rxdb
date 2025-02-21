@@ -6,12 +6,9 @@ import type {
     WithDeleted
 } from '../../types/index.d.ts';
 
-import type {
-    CollectionReference,
-    Firestore,
-    QueryFieldFilterConstraint,
-    QuerySnapshot
-} from 'firebase/firestore';
+import {
+  FirebaseFirestoreTypes
+} from '@react-native-firebase/firestore';
 
 export type FirestoreCheckpointType = {
     id: string;
@@ -27,18 +24,18 @@ export type FirestoreCheckpointType = {
      */
     serverTimestamp: string;
 };
-export type FirestoreCollection<RxDocType> = CollectionReference<RxDocType>;
+export type FirestoreCollection<RxDocType extends FirebaseFirestoreTypes.DocumentData> = FirebaseFirestoreTypes.CollectionReference<RxDocType>;
 
-export type FirestoreOptions<RxDocType> = {
+export type FirestoreOptions<RxDocType extends FirebaseFirestoreTypes.DocumentData> = {
     projectId: string;
     collection: FirestoreCollection<RxDocType>;
-    database: Firestore;
+    database: FirebaseFirestoreTypes.Module;
 };
 
 export type FirestoreSyncPullOptions<RxDocType> =
     Omit<ReplicationPullOptions<RxDocType, FirestoreCheckpointType>, 'handler' | 'stream$'>
     & {
-        filter?: QueryFieldFilterConstraint | QueryFieldFilterConstraint[];
+        filter?: FirebaseFirestoreTypes.QueryFieldFilterConstraint | FirebaseFirestoreTypes.QueryFieldFilterConstraint[];
     };
 
 export type FirestoreSyncPushOptions<RxDocType> = Omit<ReplicationPushOptions<RxDocType>, 'handler'>
@@ -46,7 +43,7 @@ export type FirestoreSyncPushOptions<RxDocType> = Omit<ReplicationPushOptions<Rx
         filter?(item: WithDeleted<RxDocType>): MaybePromise<boolean>;
     };
 
-export type SyncOptionsFirestore<RxDocType> = Omit<
+export type SyncOptionsFirestore<RxDocType extends FirebaseFirestoreTypes.DocumentData> = Omit<
     ReplicationOptions<RxDocType, any>,
     'pull' | 'push'
 > & {
@@ -67,4 +64,4 @@ export type SyncOptionsFirestore<RxDocType> = Omit<
     push?: FirestoreSyncPushOptions<RxDocType>;
 };
 
-export type GetQuery<RxDocType> = (ids: string[]) => Promise<QuerySnapshot<RxDocType>>;
+export type GetQuery<RxDocType extends FirebaseFirestoreTypes.DocumentData> = (ids: string[]) => Promise<FirebaseFirestoreTypes.QuerySnapshot<RxDocType>>;

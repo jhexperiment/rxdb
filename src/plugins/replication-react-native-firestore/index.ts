@@ -19,10 +19,9 @@ import {
     runTransaction,
     writeBatch,
     serverTimestamp,
-    QueryDocumentSnapshot,
-    waitForPendingWrites,
-    documentId
-} from 'firebase/firestore';
+    FirebaseFirestoreTypes,
+    waitForPendingWrites
+} from '@react-native-firebase/firestore';
 
 import { RxDBLeaderElectionPlugin } from '../leader-election/index.ts';
 import type {
@@ -62,7 +61,7 @@ import {
 export * from './firestore-helper.ts';
 export * from './firestore-types.ts';
 
-export class RxFirestoreReplicationState<RxDocType> extends RxReplicationState<RxDocType, FirestoreCheckpointType> {
+export class RxFirestoreReplicationState<RxDocType extends FirebaseFirestoreTypes.DocumentData> extends RxReplicationState<RxDocType, FirestoreCheckpointType> {
     constructor(
         public readonly firestore: FirestoreOptions<RxDocType>,
         public readonly replicationIdentifierHash: string,
@@ -86,7 +85,7 @@ export class RxFirestoreReplicationState<RxDocType> extends RxReplicationState<R
     }
 }
 
-export function replicateFirestore<RxDocType>(
+export function replicateFirestore<RxDocType extends FirebaseFirestoreTypes.DocumentData>(
     options: SyncOptionsFirestore<RxDocType>
 ): RxFirestoreReplicationState<RxDocType> {
     const collection: RxCollection<RxDocType> = options.collection;
@@ -138,8 +137,8 @@ export function replicateFirestore<RxDocType>(
                     );
                     sameTimeQuery = query(pullQuery,
                         where(serverTimestampField, '==', lastServerTimestamp),
-                        where(documentId(), '>', lastPulledCheckpoint.id),
-                        orderBy(documentId(), 'asc'),
+                        where(FirebaseFirestoreTypes.FieldPath.documentId(), '>', lastPulledCheckpoint.id),
+                        orderBy(FirebaseFirestoreTypes.FieldPath.documentId(), 'asc'),
                         limit(batchSize)
                     );
                 } else {
@@ -150,7 +149,7 @@ export function replicateFirestore<RxDocType>(
                 }
 
                 let mustsReRun = true;
-                let useDocs: QueryDocumentSnapshot<RxDocType>[] = [];
+                let useDocs: FirebaseFirestoreTypes.QueryDocumentSnapshot<RxDocType>[] = [];
                 while (mustsReRun) {
                     /**
                      * Local writes that have not been persisted to the server
@@ -255,7 +254,7 @@ export function replicateFirestore<RxDocType>(
                         return getDocs(
                             query(
                                 options.firestore.collection,
-                                where(documentId(), 'in', ids)
+                                where(FirebaseFirestoreTypes.FieldPath.documentId(), 'in', ids)
                             )
                         );
                     };
