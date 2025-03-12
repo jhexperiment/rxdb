@@ -207,6 +207,12 @@
       "import": "./dist/esm/plugins/replication-firestore/index.js",
       "default": "./dist/esm/plugins/replication-firestore/index.js"
     },
+    "./plugins/replication-react-native-firestore": {
+      "types": "./dist/types/plugins/replication-react-native-firestore/index.d.ts",
+      "require": "./dist/cjs/plugins/replication-react-native-firestore/index.js",
+      "import": "./dist/esm/plugins/replication-react-native-firestore/index.js",
+      "default": "./dist/esm/plugins/replication-react-native-firestore/index.js"
+    },
     "./plugins/replication-graphql": {
       "types": "./dist/types/plugins/replication-graphql/index.d.ts",
       "require": "./dist/cjs/plugins/replication-graphql/index.js",
