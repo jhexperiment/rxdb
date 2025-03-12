@@ -1,11 +1,11 @@
 ---
-title: JavaScript Vector Database that runs locally and works offline
+title: Local JavaScript Vector Database that works offline
 slug: javascript-vector-database.html
 description: Create a blazing-fast vector database in JavaScript. Leverage RxDB and transformers.js for instant, offline semantic search - no servers required!
 ---
 
 
-# Local Vector Database with RxDB and transformers.js
+# Local Vector Database with RxDB and transformers.js in JavaScript
 
 The [local-first](../offline-first.md) revolution is here, changing the way we build apps! Imagine a world where your app's data lives right on the user's device, always available, even when there's no internet. That's the magic of local-first apps. Not only do they bring faster performance and limitless scalability, but they also empower users to work offline without missing a beat. And leading the charge in this space are local database solutions, like [RxDB](https://rxdb.info/).
 
@@ -15,7 +15,7 @@ The [local-first](../offline-first.md) revolution is here, changing the way we b
     </a>
 </center>
 
-But here's where things get even more exciting: when building local-first apps, traditional databases often fall short. They're great at searching for exact matches, like `numbers` or `strings`, but what if you want to search by **meaning**, like sifting through emails to find a specific topic? Sure, you could use **RegExp**, but to truly unlock the power of semantic search and similarity-based queries, you need something more cutting-edge. Something that really understands the content of the data.
+But here's where things get even more exciting: when building [local-first](./local-first-future.md) apps, traditional databases often fall short. They're great at searching for exact matches, like `numbers` or `strings`, but what if you want to search by **meaning**, like sifting through emails to find a specific topic? Sure, you could use **RegExp**, but to truly unlock the power of semantic search and similarity-based queries, you need something more cutting-edge. Something that really understands the content of the data.
 
 
 
@@ -539,7 +539,7 @@ There are multiple other techniques to improve the performance of your local vec
 
 - **Use faster models**: There are many ways to improve performance of machine learning models. If your embedding calculation is too slow, try other models. **Smaller** mostly means **faster**. The model `Xenova/all-MiniLM-L6-v2` which is used in this tutorial is about [1 year old](https://huggingface.co/Xenova/all-MiniLM-L6-v2/tree/main). There exist better, more modern models to use. Huggingface makes these convenient to use. You only have to switch out the model name with any other model from [that site](https://huggingface.co/models?pipeline_tag=feature-extraction&library=transformers.js).
 
-- **Narrow down the search space**: By utilizing other "normal" filter operators to your query, you can narrow down the search space and optimize performance. For example in an email search you could additionally use a operator that limits the results to all emails that are not older then one year.
+- **Narrow down the search space**: By utilizing other "normal" filter operators to your query, you can narrow down the search space and optimize performance. For example in an email search you could additionally use a operator that limits the results to all emails that are not older than one year.
 
 - **Dimensionality Reduction** with an [autoencoder](https://www.youtube.com/watch?v=D16rii8Azuw): An autoencoder encodes vector data with minimal loss which can improve the performance by having to store and compare less numbers in an embedding.
 

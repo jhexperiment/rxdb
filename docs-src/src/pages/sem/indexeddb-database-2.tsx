@@ -12,6 +12,7 @@ const styles = {
 export default function Page() {
     return Home({
         sem: {
+            id: 'gads',
             /**
              * @link https://chatgpt.com/c/67950d3a-2558-8005-9c08-27999c51318e
              * @link https://chatgpt.com/c/6794f6c2-052c-8005-9a18-4a049bf97cc1
@@ -117,7 +118,7 @@ export default function Page() {
                                 href="/quickstart.html"
                                 rel="noopener"
                                 target="_blank"
-                                onClick={() => triggerTrackingEvent('start_now_main_bottom', 0.40, false)}
+                                onClick={() => triggerTrackingEvent('start_now_main_bottom', 0.40)}
                             >
                                 <div
                                     className="button get-premium"

@@ -108,6 +108,16 @@ pre code {
     font-size: var(--fontSizes-s);
 }
 
+.container .col article {
+    padding: 1rem 1rem 1rem 2rem;
+}
+@media (max-width: 500px) {
+    .container .col article {
+        padding: 0;
+    }
+}
+
+
 /* Breakpoint for mobile */
 @media (max-width: 500px) {
     .navbar__search #search_input_react {
@@ -119,7 +129,7 @@ pre code {
 /* Don't use main-wrapper class, affects home page */
 body:not(.homepage) .main-wrapper {
     width: 100%;
-    max-width: 88rem;
+    max-width: 92rem;
     /* equivalent to 1408px */
     margin: 0 auto;
 }
@@ -157,6 +167,20 @@ article .img-padding {
     background-color: white;
     padding: 5px;
     border-radius: 4px;
+}
+
+article .img-in-text-right {
+    background-color: white;
+    border-radius: 4px;
+    margin: 8px;
+    margin-left: 30px;
+    margin-bottom: 15px;
+    float: right;
+}
+
+article .img-radius {
+    background-color: white;
+    border-radius: 10px;
 }
 
 /* change the scrollbar to better match the dark layout */
@@ -419,6 +443,11 @@ p a:hover {
     text-decoration: underline;
 }
 
+
+.hero ul.checked li b {
+    cursor: pointer;
+}
+
 /* Checkbox Styling (Pricing Page) */
 ul.checked {
     padding-left: 0px;
@@ -564,7 +593,7 @@ body {
 }
 
 .slick-slider {
-    padding-bottom: 150px;
+    padding-bottom: 50px;
 }
 
 .slick-slide {
@@ -798,6 +827,7 @@ body {
     padding-bottom: 150px;
     background-color: var(--bg-color);
     position: relative;
+    overflow: hidden;
 }
 
 .block.first {
@@ -842,7 +872,7 @@ body {
     }
 
     .block.first.hero .inner {
-        flex-direction: column-reverse;
+        flex-direction: column;
     }
 }
 
@@ -895,6 +925,7 @@ body {
 .block.first.hero .hero-action .buy-option-action:hover {
     text-decoration: underline;
 }
+
 @media (max-width: 900px) {
     .block.first.hero .hero-action {
         width: 98%;
@@ -1137,7 +1168,8 @@ body {
 ul.checked li {
     font-size: 26px;
     text-align: left;
-    line-height: 200%;
+    line-height: 116%;
+    padding-top: 20px;
 }
 
 ul.checked li b {
@@ -1281,13 +1313,12 @@ ul.checked li:before {
 
 .block.sixth .buy-option {
     border-radius: 6px;
-
     padding: 3px;
 }
 
 .block.sixth .buy-option-inner {
     box-sizing: content-box;
-    background-color: var(--bg-color-dark);
+    background-color: var(--bg-color);
     padding: 10px;
     border-radius: 4px;
     position: relative;
@@ -1815,11 +1846,15 @@ samp .cm-comment {
     color: white;
 }
 
-.observe-code-example-tabs .ant-tabs-tab-btn[aria-selected="true"] {
+.ant-tabs-tab-btn {
+    color: white !important;
+}
+
+.ant-tabs-tab-btn[aria-selected="true"] {
     color: var(--color-top) !important;
 }
 
-.observe-code-example-tabs .ant-tabs-ink-bar {
+.ant-tabs-ink-bar {
     background: var(--color-top) !important;
 }
 
@@ -3272,7 +3307,7 @@ footer a:visited {
     width: max-content !important;
     align-items: center !important;
     position: static !important;
-    margin: 80px auto 0 !important;
+    margin: 40px auto 0 !important;
 }
 
 .slick-dots li button {
@@ -3452,7 +3487,7 @@ footer a:visited {
 
 .block.footer .footer-block {
     display: flex;
-    max-width: 88rem;
+    max-width: 90rem;
     width: 100%;
     flex-direction: column;
     gap: 2rem;

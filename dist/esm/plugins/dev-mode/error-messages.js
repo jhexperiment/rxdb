@@ -41,7 +41,7 @@ export var ERROR_MESSAGES = {
   QU15: 'For count queries it is not allowed to use skip or limit',
   QU16: '$regex queries must be defined by a string, not an RegExp instance. ' + 'This is because RegExp objects cannot be JSON stringified and also they are mutable which would be dangerous',
   QU17: 'Chained queries cannot be used on findByIds() RxQuery instances',
-  QU18: 'Malformated query result data. This likely happens because you create a OPFS-storage RxDatabase inside of a worker but did not set the usesRxDatabaseInWorker setting. https://rxdb.info/rx-storage-opfs.html#setting-usesrxdatabaseinworker-when-a-rxdatabase-is-also-used-inside-of-the-worker ',
+  QU18: 'Malformed query result data. This likely happens because you create a OPFS-storage RxDatabase inside of a worker but did not set the usesRxDatabaseInWorker setting. https://rxdb.info/rx-storage-opfs.html#setting-usesrxdatabaseinworker-when-a-rxdatabase-is-also-used-inside-of-the-worker ',
   QU19: 'Queries must not contain fields or properties with the value `undefined`: https://github.com/pubkey/rxdb/issues/6792#issuecomment-2624555824 ',
   // mquery.js
   MQ1: 'path must be a string or object',
@@ -229,6 +229,10 @@ export var ERROR_MESSAGES = {
   DXE1: 'non-required index fields are not possible with the dexie.js RxStorage: https://github.com/pubkey/rxdb/pull/6643#issuecomment-2505310082',
   // removed in 15.0.0, added boolean index support to dexie storage - DXE1: 'The dexie.js RxStorage does not support boolean indexes, see https://rxdb.info/rx-storage-dexie.html#boolean-index',
 
+  // plugins/storage-sqlite-trial/
+  SQL1: 'The trial version of the SQLite storage does not support attachments.',
+  SQL2: 'The trial version of the SQLite storage is limited to contain 300 documents',
+  SQL3: 'The trial version of the SQLite storage is limited to running 110 operations',
   // plugins/storage-remote
   RM1: 'Cannot communicate with a remote that was build on a different RxDB version. Did you forget to rebuild your workers when updating RxDB?',
   /**

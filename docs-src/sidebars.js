@@ -98,7 +98,7 @@ const sidebars = {
         {
           type: 'doc',
           id: 'rx-storage-sqlite',
-          label: 'SQLite 👑'
+          label: 'SQLite'
         },
         {
           type: 'doc',
@@ -464,14 +464,14 @@ const sidebars = {
       type: 'category',
       label: 'Articles',
       items: [
-        'offline-first',
-        'downsides-of-offline-first',
+        'articles/browser-database',
+        'articles/local-first-future',
         'why-nosql',
+        'downsides-of-offline-first',
         'nodejs-database',
-        'alternatives',
+        'offline-first',
         'react-native-database',
         'articles/angular-database',
-        'articles/browser-database',
         'articles/browser-storage',
         'articles/data-base',
         'articles/embedded-database',
@@ -490,6 +490,7 @@ const sidebars = {
         'articles/angular-indexeddb',
         'articles/react-indexeddb',
         'capacitor-database',
+        'alternatives',
         'electron-database',
         'articles/optimistic-ui',
         'articles/local-database',
@@ -501,7 +502,9 @@ const sidebars = {
         'articles/firebase-realtime-database-alternative',
         'articles/offline-database',
         'articles/zero-latency-local-first',
-        'articles/indexeddb-max-storage-limit'
+        'articles/indexeddb-max-storage-limit',
+        'articles/json-based-database',
+        'articles/reactjs-storage'
       ],
     },
     'contribute',

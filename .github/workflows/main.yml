@@ -245,7 +245,7 @@ jobs:
       - name: pre-pull foundationdb docker images
         # ensure it has downloaded the image
         run: |
-          docker pull foundationdb/foundationdb:7.3.23
+          docker pull foundationdb/foundationdb:7.3.59
 
       - name: install FoundationDB client and server
         working-directory: ./scripts
@@ -254,7 +254,7 @@ jobs:
       - name: install npm dependencies
         run: npm install
 
-      - run: npm install foundationdb@1.1.4
+      - run: npm install foundationdb@2.0.1
 
       - name: build
         run: npm run build
@@ -265,6 +265,32 @@ jobs:
 
       - run: npm run test:fast:foundationdb
       - run: npm run test:performance:foundationdb
+
+  storage-sqlite-trial:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set node version
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Reuse npm cache folder
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: |
+            ~/.npm
+            ./node_modules
+          key: ${{ runner.os }}-npm-storage-sqlite-trial-x3-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-storage-sqlite-trial-x3-
+
+      - run: npm install
+      - run: npm run build
+      - run: npm run test:node:sqlite-trial
 
   storage-mongodb:
     runs-on: ubuntu-22.04

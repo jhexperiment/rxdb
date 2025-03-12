@@ -210,7 +210,7 @@ Dexie.js is a minimalistic wrapper for IndexedDB. While providing a better API t
 Compared to RxDB, Dexie.js does not support complex (MongoDB-like) queries and requires a lot of fiddling when a document range of a specific index must be fetched.
 Dexie.js is used by Whatsapp Web, Microsoft To Do and Github Desktop.
 
-RxDB supports using [Dexie.js as RxStorage](./rx-storage-dexie.md) which enhances IndexedDB with RxDB features like MongoDB-like queries etc.
+RxDB supports using [Dexie.js as Database storage](./rx-storage-dexie.md) which enhances IndexedDB via dexie with RxDB features like MongoDB-like queries etc.
 
 ### LowDB
 
@@ -236,7 +236,7 @@ While it is has different caching features for offline usage, compared to RxDB i
 
 ### Replicache 
 
-Replicache is a client-side sync framework for building realtime, collaborative, local-first web apps. It claims to work with most backend stacks. In contrast to other local first tools, replicache does not work like a local database. Instead it runs on so called `mutators` that unify behavior on the client and server side. So instead of implementing and calling REST routes on both sides of your stack, you will implement mutators that define a specific delta behavior based on the input data. To observe data in replicache, there are `subscriptions` that notify your frontend application about changes to the state.
+Replicache is a client-side sync framework for building realtime, collaborative, [local-first](./articles/local-first-future.md) web apps. It claims to work with most backend stacks. In contrast to other local first tools, replicache does not work like a local database. Instead it runs on so called `mutators` that unify behavior on the client and server side. So instead of implementing and calling REST routes on both sides of your stack, you will implement mutators that define a specific delta behavior based on the input data. To observe data in replicache, there are `subscriptions` that notify your frontend application about changes to the state.
 Replicache can be used in most frontend technologies like browsers, React/Remix, NextJS/Vercel and React Native. While Replicache can be installed and used from npm, the Replicache source code is not open source and the Replicache github repo does not allow you to inspect or debug it. Still you can use replicache for in non-commercial projects, or for companies with < $200k revenue (ARR) and < $500k in funding.  (2024: Replicache will be free and Rocicorp are working on a new Zerosync product to succeed Replicache and Reflect.)
 
 ### InstantDB

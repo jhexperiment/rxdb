@@ -27,7 +27,7 @@ For a deeper look at comparing WebRTC with **WebSockets** and **WebTransport**, 
 
 1. **Reduced Latency** - By skipping a central server hop, data travels directly from one client to another, minimizing round-trip times and improving responsiveness.
 2. **Scalability** - New peers can join without overloading a central infrastructure. The sync overhead increases linearly with the number of connections rather than requiring a massive server cluster.
-3. **Privacy & Ownership** - Data stays within the user’s devices, avoiding risks tied to storing data on third-party servers. This design aligns well with [local-first](./offline-first.md) or "[zero-latency](./articles/zero-latency-local-first.md)" apps.
+3. **Privacy & Ownership** - Data stays within the user’s devices, avoiding risks tied to storing data on third-party servers. This design aligns well with [local-first](./articles/local-first-future.md) or "[zero-latency](./articles/zero-latency-local-first.md)" apps.
 4. **Resilience** - In some scenarios, if the central server is unreachable, P2P connections remain operational (assuming a functioning signaling path). Apps can still replicate data among local networks like when they are in the same Wifi or LAN.
 5. **Cost Savings** - Reducing the reliance on a high-bandwidth server can cut hosting and bandwidth expenses, particularly in high-traffic or IoT-style use cases.
 
@@ -256,7 +256,7 @@ window.process = {
 
 ### Polyfill the WebSocket and WebRTC API in Node.js
 
-While all modern browsers support the WebRTC and WebSocket APIs, they is missing in Node.js which will throw the error `No WebRTC support: Specify opts.wrtc option in this environment`. Therefore you have to polyfill it with a compatible WebRTC and WebSocket polyfill. It is recommended to use the [node-datachannel package](https://github.com/murat-dogan/node-datachannel/tree/master/polyfill) for WebRTC which **does not** come with RxDB but has to be installed before via `npm install node-datachannel --save`.
+While all modern browsers support the WebRTC and WebSocket APIs, they is missing in Node.js which will throw the error `No WebRTC support: Specify opts.wrtc option in this environment`. Therefore you have to polyfill it with a compatible WebRTC and WebSocket polyfill. It is recommended to use the [node-datachannel package](https://github.com/murat-dogan/node-datachannel/tree/master/src/polyfill) for WebRTC which **does not** come with RxDB but has to be installed before via `npm install node-datachannel --save`.
 For the Websocket API use the `ws` package that is included into RxDB.
 
 ```ts

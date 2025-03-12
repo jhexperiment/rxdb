@@ -23,8 +23,18 @@ X- "offline database"
 X- "zero local first"
 X- "webrtc p2p" - 390 http://localhost:3000/replication-webrtc.html
 
+X- "indexeddb storage limit" - 590 https://rxdb.info/articles/indexeddb-max-storage-limit.html
+X- "indexeddb size limit" - 260 https://rxdb.info/articles/indexeddb-max-storage-limit.html
+X- "indexeddb max size" - 590 https://rxdb.info/articles/indexeddb-max-storage-limit.html
+X- "indexeddb limits" - 170 https://rxdb.info/articles/indexeddb-max-storage-limit.html
+
+X- "json based database"
+X- "json vs database"
+X- "reactjs storage"
+
+## Seo
+
 - "supabase alternative"
-- "reactjs storage"
 - "store local storage"
 - "react localstorage"
 - "react-native storage"
@@ -35,7 +45,6 @@ X- "webrtc p2p" - 390 http://localhost:3000/replication-webrtc.html
 - "electron sqlite"
 - "in browser database" - 90
 - "offline first app" - 260
-- "json based database"
 - "react native sql" - 110
 - "sqlite electron"
 - "localstorage vs indexeddb"
@@ -47,13 +56,33 @@ X- "webrtc p2p" - 390 http://localhost:3000/replication-webrtc.html
 - "local first development" - 210
 - "local storage examples"
 - "local vector database" - 590
-- "nosql json database" - 140
 - "mobile app database" - 590
 - "web based database"
-- "json vs database"
 - "livequery" - 210
-  
-- "indexeddb storage limit" - 590
-- "indexeddb size limit" - 260
-- "indexeddb max size" - 590
-- "indexeddb limits" - 170
+- "expo database" - 390
+- "database sync" - 8100
+- "p2p database" - 170
+- "reactive app" - 260
+- "offline web app" - 320
+- "offline sync" - 320
+- "react native encrypted storage" - 1000
+- "firestore vs firebase" - 1300
+- "ionic alternatives" - 480
+- "react native backend" - 720
+- "react native alternative" - 1000
+- "react native sqlite" - 1900
+- "flutter vs react native" - 5400
+- "react native redux" - 3600
+- "redux alternative" - 1300
+- "Awesome local first" - 10
+- "tauri database" - 170
+
+- "sqlite javascript" - 2900
+- "sqlite typescript" - 260
+
+- "sync engine" - 390
+
+
+## Non Seo
+
+- "Local-First Partial Sync with RxDB"

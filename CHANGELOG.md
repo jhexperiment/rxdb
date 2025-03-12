@@ -2,12 +2,24 @@
 # RxDB Changelog
 
 <!-- CHANGELOG NEWEST -->
-- Fix Firestore replication ignoring initialCheckpoint [#6850](https://github.com/pubkey/rxdb/pull/6850)
+
+- FIX col.find() ignores the primaryKey index if another index was defined [#6925](https://github.com/pubkey/rxdb/pull/6925)
 <!-- ADD new changes here! -->
 
 <!-- /CHANGELOG NEWEST -->
 
 <!-- RELEASE BELOW -->
+
+### 16.8.0 (3 March 2025)
+
+- Add a free trial version of the [SQLite RxStorage](https://rxdb.info/rx-storage-sqlite.html)
+- Add article about [Why Local-First Software Is the Future and its Limitations](https://rxdb.info/articles/local-first-future.html)
+
+### 16.7.0 (23 February 2025)
+
+- Fix Firestore replication ignoring initialCheckpoint [#6850](https://github.com/pubkey/rxdb/pull/6850)
+- UPDATE foundation-db to the latest version [#6876](https://github.com/pubkey/rxdb/pull/6876)
+- ADD Allow to use firestore rules on attributes [#6896](https://github.com/pubkey/rxdb/pull/6896)
 
 ### 16.6.1 (9 February 2025)
 

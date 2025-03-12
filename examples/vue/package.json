@@ -21,12 +21,12 @@
     "pouchdb-server": "4.2.0",
     "random-int": "3.0.0",
     "register-service-worker": "1.7.2",
-    "rxjs": "7.8.1",
+    "rxjs": "7.8.2",
     "vue": "3.5.13",
     "vue-router": "4.5.0"
   },
   "devDependencies": {
-    "@types/node": "22.13.4",
+    "@types/node": "22.13.10",
     "@types/pouchdb-adapter-http": "6.1.6",
     "@types/pouchdb-adapter-idb": "6.1.7",
     "@typescript-eslint/eslint-plugin": "7.18.0",
@@ -39,14 +39,14 @@
     "@vue/eslint-config-typescript": "13.0.0",
     "async-test-util": "2.5.0",
     "concurrently": "9.1.2",
-    "copy-webpack-plugin": "12.0.2",
+    "copy-webpack-plugin": "13.0.0",
     "eslint": "8.57.1",
-    "eslint-plugin-vue": "9.32.0",
+    "eslint-plugin-vue": "9.33.0",
     "local-web-server": "5.4.0",
     "node-sass": "9.0.0",
     "sass-loader": "16.0.5",
     "testcafe": "3.7.2",
-    "typescript": "5.7.3"
+    "typescript": "5.8.2"
   },
   "eslintConfig": {
     "root": true,
