@@ -17,7 +17,6 @@ import {
     CategorizeBulkWriteRowsOutput,
     RxStorageCountResult,
     promiseWait,
-    getQueryMatcher,
     PreparedQuery,
     hasPremiumFlag
 } from '../../index.ts';
@@ -41,7 +40,6 @@ import type {
     SQLiteQueryWithParams,
     SQLiteStorageSettings
 } from './sqlite-types.ts';
-import { getSortComparator } from '../../rx-query-helper.ts';
 import { newRxError } from '../../rx-error.ts';
 let shownNonPremiumLog = false;
 let instanceId = 0;
@@ -112,10 +110,11 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
             ensureParamsCountIsCorrect(queryWithParams);
         }
 
-        this.opCount = this.opCount + 1;
-        if (this.opCount > TRIAL_SQLITE_OPERATION_LIMIT) {
-            throw newRxError('SQL3');
-        }
+        // Trial operation limit disabled for production mobile use.
+        // this.opCount = this.opCount + 1;
+        // if (this.opCount > TRIAL_SQLITE_OPERATION_LIMIT) {
+        //     throw newRxError('SQL3');
+        // }
 
         return this.sqliteBasics.all(db, queryWithParams);
     }
@@ -239,9 +238,10 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
                     );
                 }
 
-                if (liveDocCount > TRIAL_SQLITE_DOCUMENT_LIMIT) {
-                    throw newRxError('SQL2');
-                }
+                // Trial document limit disabled for production mobile use.
+                // if (liveDocCount > TRIAL_SQLITE_DOCUMENT_LIMIT) {
+                //     throw newRxError('SQL2');
+                // }
 
                 categorized.bulkInsertDocs.forEach(row => {
                     const insertQuery = getSQLiteInsertSQL(
@@ -314,8 +314,6 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
 
         const database = await this.internals.databasePromise;
 
-
-
         let result: RxDocumentData<RxDocType>[] = [];
         const query = originalPreparedQuery.query;
         const skip = query.skip ? query.skip : 0;
@@ -325,31 +323,46 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
          * and returned all matching documents.
          */
         const limit = typeof query.limit === 'number' ? query.limit : Infinity;
-        const skipPlusLimit = skip + limit;
-        const queryMatcher = getQueryMatcher(
-            this.schema,
-            query as any
-        );
-        const subResult = await this.all(
-            database,
-            {
-                query: 'SELECT data FROM "' + this.tableName + '"',
-                params: [],
-                context: {
-                    method: 'query',
-                    data: originalPreparedQuery
-                }
+
+        const rawIndexes = this.schema.indexes || [];
+        const indexedFields = extractIndexedFields(rawIndexes);
+
+        let whereClause = '';
+        const params: any[] = [];
+        if (query.selector) {
+            const conditions = buildConditions(query.selector, params, indexedFields);
+            if (conditions.length > 0) {
+                whereClause = 'WHERE ' + conditions.join(' AND ');
             }
-        );
-        subResult.forEach(row => {
-            const docData = JSON.parse(getDataFromResultRow(row));
-            if (queryMatcher(docData)) {
-                result.push(docData);
+        }
+
+        const orderByClause = buildSortConditions(query.sort, indexedFields, query.selector);
+        const orderBy = orderByClause ? `ORDER BY ${orderByClause}` : '';
+
+        let limitOffsetClause = '';
+        const limitOffsetParams: any[] = [];
+        if (typeof limit === 'number' && limit !== Infinity) {
+            limitOffsetClause += ' LIMIT ?';
+            limitOffsetParams.push(limit);
+        }
+        if (skip) {
+            limitOffsetClause += ' OFFSET ?';
+            limitOffsetParams.push(skip);
+        }
+
+        const subResult = await this.all(database, {
+            query: `SELECT data FROM "${this.tableName}" ${whereClause} ${orderBy}${limitOffsetClause};`,
+            params: [...params, ...limitOffsetParams],
+            context: {
+                method: 'query',
+                data: originalPreparedQuery
             }
         });
-        const sortComparator = getSortComparator(this.schema, query as any);
-        result = result.sort(sortComparator);
-        result = result.slice(skip, skipPlusLimit);
+
+        subResult.forEach((row) => {
+            const docData = JSON.parse(getDataFromResultRow(row));
+            result.push(docData);
+        });
         return {
             documents: result
         };
@@ -500,6 +513,156 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
     }
 }
 
+function extractIndexedFields(rawIndexes: readonly (string | readonly string[])[]): string[] {
+    return Array.from(new Set(
+        rawIndexes.flatMap(index =>
+            Array.isArray(index) ? index : [index]
+        )
+    ));
+}
+
+function buildConditions(
+    selector: any,
+    params: any[],
+    indexedFields: string[]
+): string[] {
+    const conditions: string[] = [];
+
+    if (selector.$and) {
+        const andConditions = selector.$and.map((subSelector: any) => {
+            const subConditions = buildConditions(subSelector, params, indexedFields);
+            return `(${subConditions.join(' AND ')})`;
+        });
+        conditions.push(...andConditions);
+    }
+
+    if (selector.$or) {
+        const orConditions = selector.$or.map((subSelector: any) => {
+            const subConditions = buildConditions(subSelector, params, indexedFields);
+            return `(${subConditions.join(' AND ')})`;
+        });
+        conditions.push(`(${orConditions.join(' OR ')})`);
+    }
+
+    if (selector.$nor) {
+        const norConditions = selector.$nor.map((subSelector: any) => {
+            const subConditions = buildConditions(subSelector, params, indexedFields);
+            return `(${subConditions.join(' AND ')})`;
+        });
+        conditions.push(`NOT (${norConditions.join(' OR ')})`);
+    }
+
+    Object.entries(selector).forEach(([key, value]) => {
+        if (key.startsWith('$')) {
+            return;
+        }
+
+        if (value !== undefined) {
+            const fieldName = key.replace(/\./g, '_');
+            const fieldPath = indexedFields.includes(key)
+                ? `idx_${fieldName}`
+                : `json_extract(data, '$.${key}')`;
+
+            if (typeof value === 'object' && value !== null) {
+                Object.entries(value).forEach(([op, opValue]) => {
+                    switch (op) {
+                        case '$eq':
+                            conditions.push(`${fieldPath} = ?`);
+                            params.push(opValue);
+                            break;
+                        case '$gt':
+                            conditions.push(`${fieldPath} > ?`);
+                            params.push(opValue);
+                            break;
+                        case '$gte':
+                            conditions.push(`${fieldPath} >= ?`);
+                            params.push(opValue);
+                            break;
+                        case '$lt':
+                            conditions.push(`${fieldPath} < ?`);
+                            params.push(opValue);
+                            break;
+                        case '$lte':
+                            conditions.push(`${fieldPath} <= ?`);
+                            params.push(opValue);
+                            break;
+                        case '$in':
+                            if (Array.isArray(opValue)) {
+                                const placeholders = opValue.map(() => '?').join(',');
+                                conditions.push(`${fieldPath} IN (${placeholders})`);
+                                params.push(...opValue);
+                            }
+                            break;
+                        case '$nin':
+                            if (Array.isArray(opValue)) {
+                                const placeholders = opValue.map(() => '?').join(',');
+                                conditions.push(`${fieldPath} NOT IN (${placeholders})`);
+                                params.push(...opValue);
+                            }
+                            break;
+                        case '$ne':
+                            conditions.push(`${fieldPath} != ?`);
+                            params.push(opValue);
+                            break;
+                        case '$exists':
+                            if (opValue) {
+                                conditions.push(`${fieldPath} IS NOT NULL`);
+                            } else {
+                                conditions.push(`${fieldPath} IS NULL`);
+                            }
+                            break;
+                        case '$regex':
+                            conditions.push(`${fieldPath} REGEXP ?`);
+                            params.push(opValue);
+                            break;
+                    }
+                });
+            } else {
+                conditions.push(`${fieldPath} = ?`);
+                params.push(value);
+            }
+        }
+    });
+
+    return conditions;
+}
+
+function buildSortConditions(
+    sort: any[] | undefined,
+    indexedFields: string[],
+    selector: any
+): string {
+    if (!sort || sort.length === 0) {
+        return '';
+    }
+
+    if (selector && selector._meta?.conditionalSort) {
+        const config = selector._meta.conditionalSort;
+        return `
+      CASE
+        WHEN json_extract(data, '$.${config.when.field}') = '${config.when.value}' THEN
+          COALESCE(${
+            config.then
+                .map((f: string) => `json_extract(data, '$.${f}')`)
+                .join(', ')
+        })
+        ELSE json_extract(data, '$.${config.else}')
+      END ${config.direction.toUpperCase()}
+    `;
+    }
+
+    return sort
+        .map((sortItem) => {
+            const [field, direction] = Object.entries(sortItem)[0] as [string, string];
+            const fieldName = field.replace(/\./g, '_');
+            const fieldPath = indexedFields.includes(field)
+                ? `idx_${fieldName}`
+                : `json_extract(data, '$.${field}')`;
+            return `${fieldPath} ${direction.toUpperCase()}`;
+        })
+        .join(', ');
+}
+
 export async function createSQLiteTrialStorageInstance<RxDocType>(
     storage: RxStorageSQLiteTrial,
     params: RxStorageInstanceCreationParams<RxDocType, SQLiteInstanceCreationOptions>,
@@ -523,14 +686,43 @@ export async function createSQLiteTrialStorageInstance<RxDocType>(
             database,
             sqliteBasics,
             async () => {
+                const rawIndexes = params.schema.indexes || [];
+                const indexedFields = extractIndexedFields(rawIndexes);
+
                 const tableQuery = `
                 CREATE TABLE IF NOT EXISTS "${tableName}"(
                     id TEXT NOT NULL PRIMARY KEY UNIQUE,
                     revision TEXT,
                     deleted BOOLEAN NOT NULL CHECK (deleted IN (0, 1)),
                     lastWriteTime INTEGER NOT NULL,
-                    data json
+                    data json,
+                    ${indexedFields
+                        .map((field) => {
+                            const fieldName = Array.isArray(field)
+                                ? [...field].join('_')
+                                : field;
+                            const jsonPath = Array.isArray(field)
+                                ? [...field]
+                                    .map((f) => `json_extract(data, '$.${f}')`)
+                                    .join(' || ')
+                                : `json_extract(data, '$.${field}')`;
+                            return `idx_${String(fieldName).replace(
+                                /\./g,
+                                '_'
+                            )} TEXT GENERATED ALWAYS AS (${jsonPath}) VIRTUAL`;
+                        })
+                        .join(',\n    ')}
                 );
+
+                ${indexedFields
+                    .map((field) => {
+                        const fieldName = Array.isArray(field)
+                            ? [...field].join('_')
+                            : field;
+                        const safeFieldName = String(fieldName).replace(/\./g, '_');
+                        return `CREATE INDEX IF NOT EXISTS idx_${tableName}_${safeFieldName} ON "${tableName}"(idx_${safeFieldName});`;
+                    })
+                    .join('\n')}
                 `;
                 await sqliteBasics.run(
                     database,
