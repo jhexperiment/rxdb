@@ -26,11 +26,13 @@ import {
     closeDatabaseConnection,
     ensureParamsCountIsCorrect,
     getDatabaseConnection,
-    getSQLiteUpdateSQL,
     RX_STORAGE_NAME_SQLITE,
     sqliteTransaction,
     getDataFromResultRow,
-    getSQLiteInsertSQL,
+    getSQLiteBulkUpsertSQL,
+    getBulkWritePersistChunkSize,
+    parseSqliteCountResult,
+    SQLITE_BULK_WRITE_ID_CHUNK_SIZE,
     TX_QUEUE_BY_DATABASE
 } from './sqlite-helpers.ts';
 import type {
@@ -119,6 +121,72 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
         return this.sqliteBasics.all(db, queryWithParams);
     }
 
+    private async loadExistingDocumentsByIds(
+        database: any,
+        ids: string[]
+    ): Promise<Map<RxDocumentData<RxDocType>[StringKeys<RxDocType>], RxDocumentData<RxDocType>>> {
+        const docsInDb: Map<RxDocumentData<RxDocType>[StringKeys<RxDocType>], RxDocumentData<RxDocType>> = new Map();
+
+        if (ids.length === 0) {
+            return docsInDb;
+        }
+
+        const uniqueIds = [...new Set(ids)];
+
+        for (
+            let offset = 0;
+            offset < uniqueIds.length;
+            offset += SQLITE_BULK_WRITE_ID_CHUNK_SIZE
+        ) {
+            const chunk = uniqueIds.slice(offset, offset + SQLITE_BULK_WRITE_ID_CHUNK_SIZE);
+            const placeholders = chunk.map(() => '?').join(',');
+            const result = await this.all(
+                database,
+                {
+                    query: `SELECT data FROM "${this.tableName}" WHERE id IN (${placeholders})`,
+                    params: chunk,
+                    context: {
+                        method: 'bulkWrite',
+                        data: { ids: chunk }
+                    }
+                }
+            );
+
+            result.forEach(docSQLResult => {
+                const doc = JSON.parse(getDataFromResultRow(docSQLResult));
+                const id = doc[this.primaryPath];
+                docsInDb.set(id, doc);
+            });
+
+            await promiseWait(0);
+        }
+
+        return docsInDb;
+    }
+
+    private async countLiveDocuments(database: any): Promise<number> {
+        const result = await this.all(
+            database,
+            {
+                query: `SELECT COUNT(*) AS liveCount FROM "${this.tableName}" WHERE deleted = 0`,
+                params: [],
+                context: {
+                    method: 'bulkWrite',
+                    data: 'countLiveDocuments'
+                }
+            }
+        );
+
+        const row = result[0];
+        if (Array.isArray(row)) {
+            return Number(row[0]);
+        }
+        if (row && typeof row === 'object' && 'liveCount' in row) {
+            return Number((row as { liveCount: number }).liveCount);
+        }
+        return Number(row);
+    }
+
     /**
      * @link https://medium.com/@JasonWyatt/squeezing-performance-from-sqlite-insertions-971aff98eef2
      */
@@ -131,8 +199,8 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
         const ret: RxStorageBulkWriteResponse<RxDocType> = {
             error: []
         };
-        const writePromises: Promise<any>[] = [];
         let categorized: CategorizeBulkWriteRowsOutput<RxDocType> = {} as any;
+        const persistChunkSize = getBulkWritePersistChunkSize(this.devMode);
 
         const isPremium = await hasPremiumFlag();
         if (
@@ -163,24 +231,14 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
                     this.openWriteCount$.next(this.openWriteCount$.getValue() - 1);
                     throw new Error('SQLite.bulkWrite(' + context + ') already closed ' + this.tableName + ' context: ' + context);
                 }
-                const result = await this.all(
-                    database,
-                    {
-                        query: `SELECT data FROM "${this.tableName}"`,
-                        params: [],
-                        context: {
-                            method: 'bulkWrite',
-                            data: documentWrites
-                        }
-                    }
-                );
 
-                const docsInDb: Map<RxDocumentData<RxDocType>[StringKeys<RxDocType>], RxDocumentData<RxDocType>> = new Map();
-                result.forEach(docSQLResult => {
-                    const doc = JSON.parse(getDataFromResultRow(docSQLResult));
-                    const id = doc[this.primaryPath];
-                    docsInDb.set(id, doc);
-                });
+                const writeIds = documentWrites
+                    .map(row => row.document[this.primaryPath] as string)
+                    .filter(Boolean);
+                const docsInDb = await this.loadExistingDocumentsByIds(
+                    database,
+                    writeIds
+                );
                 categorized = categorizeBulkWriteRows(
                     this,
                     this.primaryPath,
@@ -196,11 +254,9 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
                  * Therefore we count the resulting amount of non-deleted documents.
                  */
                 let liveDocCount = 0;
-                docsInDb.forEach(doc => {
-                    if (!doc._deleted) {
-                        liveDocCount = liveDocCount + 1;
-                    }
-                });
+                if (!isPremium) {
+                    liveDocCount = await this.countLiveDocuments(database);
+                }
                 categorized.bulkInsertDocs.forEach(row => {
                     if (!row.document._deleted) {
                         liveDocCount = liveDocCount + 1;
@@ -243,42 +299,30 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
                 //     throw newRxError('SQL2');
                 // }
 
-                categorized.bulkInsertDocs.forEach(row => {
-                    const insertQuery = getSQLiteInsertSQL(
+                await promiseWait(0);
+
+                const rowsToPersist = [
+                    ...categorized.bulkInsertDocs,
+                    ...categorized.bulkUpdateDocs
+                ];
+
+                for (
+                    let offset = 0;
+                    offset < rowsToPersist.length;
+                    offset += persistChunkSize
+                ) {
+                    const persistChunk = rowsToPersist.slice(
+                        offset,
+                        offset + persistChunkSize
+                    );
+                    const upsertQuery = getSQLiteBulkUpsertSQL(
                         this.tableName,
                         this.primaryPath as any,
-                        row.document
+                        persistChunk
                     );
-                    writePromises.push(
-                        this.all(
-                            database,
-                            {
-                                query: insertQuery.query,
-                                params: insertQuery.params,
-                                context: {
-                                    method: 'bulkWrite',
-                                    data: categorized
-                                }
-                            }
-                        )
-                    );
-                });
-
-                categorized.bulkUpdateDocs.forEach(row => {
-                    const updateQuery = getSQLiteUpdateSQL<RxDocType>(
-                        this.tableName,
-                        this.primaryPath,
-                        row
-                    );
-                    writePromises.push(
-                        this.run(
-                            database,
-                            updateQuery
-                        )
-                    );
-                });
-
-                await Promise.all(writePromises);
+                    await this.run(database, upsertQuery);
+                    await promiseWait(0);
+                }
 
                 // close transaction
                 if (this.closed) {
@@ -296,6 +340,7 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
         );
 
         if (categorized && categorized.eventBulk.events.length > 0) {
+            await promiseWait(0);
             const lastState = ensureNotFalsy(categorized.newestRow).document;
             categorized.eventBulk.checkpoint = {
                 id: lastState[this.primaryPath],
@@ -370,9 +415,31 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
     async count(
         originalPreparedQuery: PreparedQuery<RxDocType>
     ): Promise<RxStorageCountResult> {
-        const results = await this.query(originalPreparedQuery);
+        const database = await this.internals.databasePromise;
+        const query = originalPreparedQuery.query;
+        const rawIndexes = this.schema.indexes || [];
+        const indexedFields = extractIndexedFields(rawIndexes);
+
+        let whereClause = '';
+        const params: any[] = [];
+        if (query.selector) {
+            const conditions = buildConditions(query.selector, params, indexedFields);
+            if (conditions.length > 0) {
+                whereClause = 'WHERE ' + conditions.join(' AND ');
+            }
+        }
+
+        const subResult = await this.all(database, {
+            query: `SELECT COUNT(*) AS cnt FROM "${this.tableName}" ${whereClause}`,
+            params,
+            context: {
+                method: 'count',
+                data: originalPreparedQuery
+            }
+        });
+
         return {
-            count: results.documents.length,
+            count: parseSqliteCountResult(subResult[0]),
             mode: 'fast'
         };
     }
@@ -388,30 +455,43 @@ export class RxStorageInstanceSQLite<RxDocType> implements RxStorageInstance<
             throw new Error('SQLite.findDocumentsById() already closed ' + this.tableName);
         }
 
-        const result = await this.all(
-            database,
-            {
-                query: `SELECT data FROM "${this.tableName}"`,
-                params: [],
-                context: {
-                    method: 'findDocumentsById',
-                    data: ids
+        if (ids.length === 0) {
+            return [];
+        }
+
+        const uniqueIds = [...new Set(ids)];
+        const ret: RxDocumentData<RxDocType>[] = [];
+
+        for (
+            let offset = 0;
+            offset < uniqueIds.length;
+            offset += SQLITE_BULK_WRITE_ID_CHUNK_SIZE
+        ) {
+            const chunk = uniqueIds.slice(offset, offset + SQLITE_BULK_WRITE_ID_CHUNK_SIZE);
+            const placeholders = chunk.map(() => '?').join(',');
+            const result = await this.all(
+                database,
+                {
+                    query: `SELECT data FROM "${this.tableName}" WHERE id IN (${placeholders})`,
+                    params: chunk,
+                    context: {
+                        method: 'findDocumentsById',
+                        data: chunk
+                    }
+                }
+            );
+
+            for (let i = 0; i < result.length; ++i) {
+                const resultRow = result[i];
+                const doc: RxDocumentData<RxDocType> = JSON.parse(getDataFromResultRow(resultRow));
+                if (
+                    withDeleted || !doc._deleted
+                ) {
+                    ret.push(doc);
                 }
             }
-        );
-        const ret: RxDocumentData<RxDocType>[] = [];
-        for (let i = 0; i < result.length; ++i) {
-            const resultRow = result[i];
-            const doc: RxDocumentData<RxDocType> = JSON.parse(getDataFromResultRow(resultRow));
-            if (
-                ids.includes((doc as any)[this.primaryPath]) &&
-                (
-                    withDeleted || !doc._deleted
-                )
-            ) {
-                ret.push(doc);
-            }
         }
+
         return ret;
     }
 

@@ -14,6 +14,60 @@ import type {
 } from './sqlite-types.ts';
 
 export const NON_IMPLEMENTED_OPERATOR_QUERY_BATCH_SIZE = 50;
+
+/** SQLite default max bound variables; keep chunks below this. */
+export const SQLITE_MAX_VARIABLES = 999;
+
+/** IDs per SELECT … WHERE id IN (…) during bulkWrite. */
+export const SQLITE_BULK_WRITE_ID_CHUNK_SIZE = 100;
+
+/** Rows per multi-value INSERT during bulkWrite (5 params per row). */
+export const SQLITE_BULK_INSERT_CHUNK_SIZE = 50;
+
+/** Smaller chunks in dev mode to shorten JS-thread bursts on React Native. */
+export const SQLITE_BULK_INSERT_CHUNK_SIZE_TRIAL = 5;
+
+export function getBulkWritePersistChunkSize(devMode: boolean): number {
+    return devMode
+        ? SQLITE_BULK_INSERT_CHUNK_SIZE_TRIAL
+        : SQLITE_BULK_INSERT_CHUNK_SIZE;
+}
+
+const PRAGMAS_APPLIED = new WeakSet<object>();
+
+export async function applySqlitePerformancePragmas(
+    database: SQLiteDatabaseClass,
+    sqliteBasics: SQLiteBasics<any>
+): Promise<void> {
+    if (PRAGMAS_APPLIED.has(database)) {
+        return;
+    }
+    PRAGMAS_APPLIED.add(database);
+
+    const journalMode = sqliteBasics.journalMode || 'WAL';
+    if (journalMode) {
+        await sqliteBasics.setPragma(database, 'journal_mode', journalMode);
+    }
+    await sqliteBasics.setPragma(database, 'synchronous', 'NORMAL');
+    await sqliteBasics.setPragma(database, 'cache_size', '-64000');
+    await sqliteBasics.setPragma(database, 'temp_store', 'MEMORY');
+}
+
+export function parseSqliteCountResult(row: unknown): number {
+    if (Array.isArray(row)) {
+        return Number(row[0]);
+    }
+    if (row && typeof row === 'object') {
+        const record = row as Record<string, unknown>;
+        if ('cnt' in record) {
+            return Number(record.cnt);
+        }
+        if ('liveCount' in record) {
+            return Number(record.liveCount);
+        }
+    }
+    return Number(row);
+}
 export type DatabaseState = {
     database: Promise<SQLiteDatabaseClass>;
     openConnections: number;
@@ -35,7 +89,10 @@ export function getDatabaseConnection(
     let state = DATABASE_STATE_BY_NAME.get(databaseName);
     if (!state) {
         state = {
-            database: sqliteBasics.open(databaseName),
+            database: sqliteBasics.open(databaseName).then(async (database) => {
+                await applySqlitePerformancePragmas(database, sqliteBasics);
+                return database;
+            }),
             sqliteBasics,
             openConnections: 1
         };
@@ -114,6 +171,99 @@ export function getSQLiteInsertSQL<RxDocType>(
             data: {
                 collectionName,
                 primaryPath
+            }
+        }
+    };
+}
+
+export function getSQLiteBulkInsertSQL<RxDocType>(
+    collectionName: string,
+    primaryPath: keyof RxDocType,
+    rows: { document: RxDocumentData<RxDocType> }[]
+): SQLiteQueryWithParams {
+    const valueGroups: string[] = [];
+    const params: any[] = [];
+
+    for (const row of rows) {
+        const docData = row.document;
+        valueGroups.push('(?, ?, ?, ?, ?)');
+        params.push(
+            docData[primaryPath] as string,
+            docData._rev,
+            docData._deleted ? 1 : 0,
+            docData._meta.lwt,
+            JSON.stringify(docData)
+        );
+    }
+
+    const query = `
+        INSERT INTO "${collectionName}" (
+            id,
+            revision,
+            deleted,
+            lastWriteTime,
+            data
+        ) VALUES ${valueGroups.join(', ')};
+    `;
+
+    return {
+        query,
+        params,
+        context: {
+            method: 'getSQLiteBulkInsertSQL',
+            data: {
+                collectionName,
+                primaryPath,
+                rowCount: rows.length
+            }
+        }
+    };
+}
+
+export function getSQLiteBulkUpsertSQL<RxDocType>(
+    collectionName: string,
+    primaryPath: keyof RxDocType,
+    rows: { document: RxDocumentData<RxDocType> }[]
+): SQLiteQueryWithParams {
+    const valueGroups: string[] = [];
+    const params: any[] = [];
+
+    for (const row of rows) {
+        const docData = row.document;
+        valueGroups.push('(?, ?, ?, ?, ?)');
+        params.push(
+            docData[primaryPath] as string,
+            docData._rev,
+            docData._deleted ? 1 : 0,
+            docData._meta.lwt,
+            JSON.stringify(docData)
+        );
+    }
+
+    const query = `
+        INSERT INTO "${collectionName}" (
+            id,
+            revision,
+            deleted,
+            lastWriteTime,
+            data
+        ) VALUES ${valueGroups.join(', ')}
+        ON CONFLICT(id) DO UPDATE SET
+            revision = excluded.revision,
+            deleted = excluded.deleted,
+            lastWriteTime = excluded.lastWriteTime,
+            data = excluded.data;
+    `;
+
+    return {
+        query,
+        params,
+        context: {
+            method: 'getSQLiteBulkUpsertSQL',
+            data: {
+                collectionName,
+                primaryPath,
+                rowCount: rows.length
             }
         }
     };
